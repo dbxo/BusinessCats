@@ -7,6 +7,7 @@ using System.Windows;
 
 using MahApps.Metro;
 
+
 namespace BusinessCats
 {
     /// <summary>
@@ -28,5 +29,20 @@ namespace BusinessCats
 
             base.OnStartup(e);
         }
+
+        [STAThread]
+        public static void Main(string[] args)
+        {
+            Console.WriteLine("Parametros");
+            foreach(string arg in args)
+            {
+                Console.WriteLine("Argument: " + arg);
+            }
+            var application = new App();
+            application.InitializeComponent();
+            application.Run();
+        }
     }
+
+ 
 }
