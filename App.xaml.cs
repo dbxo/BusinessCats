@@ -6,7 +6,7 @@ using System.Linq;
 using System.Windows;
 
 using MahApps.Metro;
-
+using System.IO;
 
 namespace BusinessCats
 {
@@ -33,14 +33,23 @@ namespace BusinessCats
         [STAThread]
         public static void Main(string[] args)
         {
-            Console.WriteLine("Parametros");
-            foreach(string arg in args)
+            if (args.Length > 1)
             {
-                Console.WriteLine("Argument: " + arg);
+                if (args[0].Equals("-snipandpaste"))
+                {
+                    Console.WriteLine("Sniping to " + args[1]);
+                    string file = Directory.GetCurrentDirectory()+"\\shadowcat.txt";
+                    System.IO.File.Delete(file);
+                    System.IO.File.WriteAllLines(file, args);
+                    Console.ReadLine();
+                }
             }
-            var application = new App();
-            application.InitializeComponent();
-            application.Run();
+            else {
+                Console.WriteLine("Launching");
+                var application = new App();
+                application.InitializeComponent();
+                application.Run();
+            }
         }
     }
 

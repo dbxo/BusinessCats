@@ -18,6 +18,7 @@ using MahApps.Metro.Controls.Dialogs;
 using System.Windows.Threading;
 using System.IO;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace BusinessCats
 {
@@ -28,12 +29,14 @@ namespace BusinessCats
     public partial class MainWindow : MetroWindow
     {
         public SeriousBusinessCat _seriousBusiness;
+        private System.Windows.Forms.NotifyIcon notifyIcon = null;
 
         private string _hotkeys = "";
 
         public MainWindow()
         {
             InitializeComponent();
+            MainWindow_Initialized();
 
             this.MetroDialogOptions.ColorScheme = MetroDialogColorScheme.Accented;
 
@@ -87,7 +90,46 @@ namespace BusinessCats
                 }
             };
 
+
             _seriousBusiness = new SeriousBusinessCat(this);
+        }
+
+        private void MainWindow_Initialized()
+        {
+            notifyIcon = new System.Windows.Forms.NotifyIcon();
+            notifyIcon.Click += new EventHandler(notifyIcon_Click);
+            notifyIcon.DoubleClick += new EventHandler(notifyIcon_DoubleClick);
+            notifyIcon.Icon = new Icon(@"../../Resources/BusinessCats.ico");
+            notifyIcon.Text = "ShadowCat - Sametime will be always better than skype";
+            notifyIcon.Visible = true;
+            // notifyIcon.ShowBalloonTip(5000, "Hi", "This is a BallonTip from Windows Notification", System.Windows.Forms.ToolTipIcon.Info);
+            var menuItem1 = new System.Windows.Forms.MenuItem();
+            var contextMenu1 = new System.Windows.Forms.ContextMenu();
+            contextMenu1.MenuItems.AddRange(
+                    new System.Windows.Forms.MenuItem[] { menuItem1 });
+            menuItem1.Index = 0;
+            menuItem1.Text = "E&xit";
+            menuItem1.Click += new System.EventHandler(menuItem1_Click);
+            notifyIcon.ContextMenu = contextMenu1;
+        }
+
+        private void menuItem1_Click(object sender, EventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void notifyIcon_DoubleClick(object sender, EventArgs e)
+        {
+            //throw new NotImplementedException();
+        }
+
+        private void notifyIcon_Click(object sender, EventArgs e)
+        {
+            //throw new NotImplementedException();
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
         }
 
         private void btnKrahsWobniar_Click(object sender, RoutedEventArgs e)

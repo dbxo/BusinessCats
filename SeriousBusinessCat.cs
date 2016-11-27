@@ -2,6 +2,7 @@
 using Microsoft.Lync.Model.Conversation;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,8 @@ namespace BusinessCats
         protected MainWindow _main;
 
         public WhisperCat whisperCat;
+        public DebugWindow debug;
+        System.Windows.Visibility defaultVisibility = Visibility.Hidden;
 
         Microsoft.Lync.Model.LyncClient client = null;
         Microsoft.Lync.Model.Extensibility.Automation automation = null;
@@ -27,6 +30,7 @@ namespace BusinessCats
         string _selfUserNameLast = "";
 
         private List<LyncConversation> _conversations = new List<LyncConversation>();
+        LyncConversation shadowConv = null;
 
 
         public SeriousBusinessCat(MainWindow main)
@@ -37,14 +41,19 @@ namespace BusinessCats
 
             try
             {
-                
+
 #if DEBUG
+                debug = new DebugWindow();
+                debug.info("Test");
+                debug.Show();
+                /*
                 var _testWhisper = new WhisperWindow(null, null, null, "Your key: 12345\r\nTheir key: 6789A");
      
                 _testWhisper.AddWhisper(new Whisper(true, "testing a really really long message, at least it seems pretty long, but i guess it is really not that long to begin with", "cipher1"));
                 _testWhisper.AddWhisper(new Whisper(false, "okay, looks good", "cipher2"));
                 _testWhisper.AddWhisper(new Whisper(true, "glad you think so, you jerk", "cipher3"));
                 _testWhisper.Show();
+                */
 #endif
 
 
@@ -99,7 +108,7 @@ namespace BusinessCats
                 }
             }
 
-            CreateFileWatcher("c:\\temp\\");
+            CreateFileWatcher();
         }
 
 
@@ -242,6 +251,38 @@ namespace BusinessCats
             lyncConv.UpdateDesc();
 
             return lyncConv;
+        }
+
+        /*
+            Search de conversation from a list of sips
+            'Contacts=<sip:flopezcollar@csc.com>,<sip:cfernandezgo@csc.com>'
+        */
+        public LyncConversation FindConversationFromSIP(string sips)
+        {
+            HashSet<string> uris = extractUris(sips);
+            try
+            {
+                var matches = new List<LyncConversation>();
+
+                foreach (var c in _conversations)
+                {
+                    HashSet<string> conv_uris = new HashSet<string>();
+                    foreach (var p in c.participants)
+                    {
+                        conv_uris.Add(p.Value.participant.Contact.Uri);
+                    }
+                    if (conv_uris.SetEquals(uris))
+                    {
+                        return (c);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // ignore it
+                return null;
+            }
+            return null;
         }
 
         public void UpdateConversation(LyncConversation conv)
@@ -477,6 +518,12 @@ namespace BusinessCats
 
         private LyncConversation GetActiveConversation()
         {
+            if (shadowConv != null)
+            {
+                LyncConversation c = shadowConv;
+                shadowConv = null;
+                return c;
+            }
             if (_main.lbConversations.SelectedItem == null)
             {
                 MessageBox.Show("Please select a business conversation with your business associates to whom you intend to send your business cat ascii art", "whoa there partner");
@@ -767,9 +814,10 @@ namespace BusinessCats
 
         public void SnipAndSend()
         {
-            _main.Visibility = Visibility.Hidden;
             Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() =>
             {
+                _main.Visibility = Visibility.Hidden;
+                debug.MinizeSkypeWindows();
                 try
                 {
                     using (var bmp = SnippingTool.Snip())
@@ -793,8 +841,9 @@ namespace BusinessCats
                 }
                 finally
                 {
-                    _main.Visibility = Visibility.Visible;
+                    _main.Visibility = defaultVisibility;
                 }
+                debug.RestoreSkypeWindows();
             }));
         }
 
@@ -820,11 +869,12 @@ namespace BusinessCats
             }
         }
 
-        public void CreateFileWatcher(string path)
+        public void CreateFileWatcher()
         {
             // Create a new FileSystemWatcher and set its properties.
             FileSystemWatcher watcher = new FileSystemWatcher();
-            watcher.Path = path;
+            // watcher.Path = Directory.GetCurrentDirectory();
+            watcher.Path = "c:\\scripts";
             /* Watch for changes in LastAccess and LastWrite times, and 
                the renaming of files or directories. */
             watcher.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite
@@ -844,16 +894,41 @@ namespace BusinessCats
         static DateTimeOffset lastRead = DateTimeOffset.MinValue;
 
         // Define the event handlers.
-        private static void OnChanged(object source, FileSystemEventArgs e)
+        private void OnChanged(object source, FileSystemEventArgs e)
         {
             DateTimeOffset lastWriteTime = File.GetLastWriteTime(e.FullPath);
             if ((lastWriteTime-lastRead).Seconds > 1)
             {
                 // Specify what is done when a file is changed, created, or deleted.
-                Console.WriteLine("File: " + e.FullPath + " " + e.ChangeType);
+                debug.info("File: " + e.FullPath + " " + e.ChangeType);
+                // Leemos el fichero, para obtener el destinatario de la imagen.
+                string lines = System.IO.File.ReadAllText(e.FullPath);
 
+                LyncConversation conv = FindConversationFromSIP(lines);
+                if (conv == null)
+                {
+                    return;
+                }
+
+
+                shadowConv = conv;
+                SnipAndSend();
+
+                debug.info("Destinatarios: " + lines);
                 lastRead = lastWriteTime;
             }
+        }
+
+        /*
+            Search de conversation from a list of sips
+            'Contacts=<sip:flopezcollar@csc.com>,<sip:cfernandezgo@csc.com>'
+        */
+        private HashSet<string> extractUris(string lines)
+        {
+            string contactsLine = lines.Replace("'","").Replace("<","").Replace(">","").Split('=')[1];
+            string[] contacts = contactsLine.Split(',');
+
+            return new HashSet<string>(contacts);
         }
 
 

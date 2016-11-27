@@ -15,7 +15,7 @@
         SaveWindowPosition="True"
         WindowTransitionsEnabled="False"
         SnapsToDevicePixels="True"
-        x:Name="_this"
+        x:Name="_this" ShowInTaskbar="False" Visibility="Hidden"
         >
     
     <Window.Resources>
